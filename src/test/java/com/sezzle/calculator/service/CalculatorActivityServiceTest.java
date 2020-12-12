@@ -9,8 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,7 +33,7 @@ class CalculatorActivityServiceTest {
     @DisplayName("given activity when valid should save")
     public void testGivenActivityWhenValidShouldSave() throws InvalidQuestionAnswerException, BackToFutureException {
         //prepare
-        CalculatorActivity activity = new CalculatorActivity("id", "user-1", "2+2", "4", LocalDate.now());
+        CalculatorActivity activity = createDummyCalculatorActivity();
         //Action
         service.insert(activity);
         //result
@@ -46,7 +44,8 @@ class CalculatorActivityServiceTest {
     @DisplayName("given activity when invalid with question should throw exception")
     public void testGivenActivityWhenInvalidWithQuestionShouldThrowException() {
         // Prepare
-        CalculatorActivity activity = new CalculatorActivity("id", "user-1", "", "4", LocalDate.now());
+        CalculatorActivity activity = createDummyCalculatorActivity();
+        activity.setQuestion("");
         String expectedMessage = "Question field is missing data";
         // Action
 
@@ -62,7 +61,8 @@ class CalculatorActivityServiceTest {
     @DisplayName("given activity when invalid with answer should throw exception")
     public void testInsertWithInvalidAnswer() {
         //Prepare
-        CalculatorActivity activity = new CalculatorActivity("id", "user-1", "2+2", null, LocalDate.now());
+        CalculatorActivity activity = createDummyCalculatorActivity();
+        activity.setAnswer(null);
         String expectedMessage = "Answer field is missing data";
 
         Exception exception = Assertions.assertThrows(InvalidQuestionAnswerException.class, () -> service.insert(activity),
@@ -76,7 +76,8 @@ class CalculatorActivityServiceTest {
     @Test
     @DisplayName("given activity when timestamp in future should throw exception")
     public void testInsertWithFutureTimestamp() {
-        CalculatorActivity activity = new CalculatorActivity("id", "user-1", "2+2", "4", LocalDate.now().plusDays(1L));
+        CalculatorActivity activity = createDummyCalculatorActivity();
+        activity.setTimestamp(activity.getTimestamp().plusDays(1L));
         String expectedMessage = "Tell me, Future Kid, who's President of the United States in 1985?";
 
         Exception exception = Assertions.assertThrows(BackToFutureException.class, () -> service.insert(activity),
@@ -85,5 +86,10 @@ class CalculatorActivityServiceTest {
 
         Assertions.assertEquals(expectedMessage, actualMessage, "BackToFutureException was thrown with different message");
     }
+
+    private CalculatorActivity createDummyCalculatorActivity() {
+        return new CalculatorActivity("user-1", "2+2", "4", LocalDate.now());
+    }
+
 
 }

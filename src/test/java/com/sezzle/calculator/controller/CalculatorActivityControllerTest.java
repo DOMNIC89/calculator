@@ -34,7 +34,7 @@ class CalculatorActivityControllerTest {
     @Test
     @DisplayName("given an activity when valid should call insert method of service and return status as ok")
     public void testPostCalculatorActivity() throws InvalidQuestionAnswerException, BackToFutureException {
-        CalculatorActivity activity = new CalculatorActivity("id", "user-1", "2+2", "4", LocalDate.now());
+        CalculatorActivity activity = new CalculatorActivity("user-1", "2+2", "4", LocalDate.now());
         ResponseEntity<?> responseEntity = controller.postCalculatorActivity(activity);
         Mockito.verify(service).insert(activity);
         assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
@@ -43,7 +43,7 @@ class CalculatorActivityControllerTest {
     @Test
     @DisplayName("given an activity when invalid should throw an exception")
     public void testPostCalculatorActivityThrowInvalidQuestionAnswerException() throws InvalidQuestionAnswerException, BackToFutureException {
-        CalculatorActivity activity = new CalculatorActivity("id", "user-1", "", "4", LocalDate.now());
+        CalculatorActivity activity = new CalculatorActivity("user-1", "", "4", LocalDate.now());
         Mockito.doThrow(new InvalidQuestionAnswerException("Question")).when(service).insert(activity);
         Assertions.assertThrows(InvalidQuestionAnswerException.class, () -> controller.postCalculatorActivity(activity),
                 "Exception is not thrown as expected");

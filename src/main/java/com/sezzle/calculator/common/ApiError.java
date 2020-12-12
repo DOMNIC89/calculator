@@ -22,4 +22,16 @@ public class ApiError {
         this.severity = severity;
         this.status = status;
     }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Severity getSeverity() {
+        return severity;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
 }

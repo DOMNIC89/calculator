@@ -20,23 +20,23 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
-    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(final HttpMessageNotReadableException ex, final HttpHeaders headers, final HttpStatus status, final WebRequest request) {
         return handleExceptionInternal(ex,
                 new ApiError("Invalid Data", Severity.FATAL, HttpStatus.BAD_REQUEST), headers, HttpStatus.BAD_REQUEST, request);
     }
 
     @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(final MethodArgumentNotValidException ex, final HttpHeaders headers, final HttpStatus status, final WebRequest request) {
         return handleExceptionInternal(ex, new ApiError(ex.getBindingResult().toString(), Severity.ERROR, HttpStatus.BAD_REQUEST), headers, HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(value = {InvalidQuestionAnswerException.class})
-    protected ResponseEntity<Object> handleInvalidQuestionAnswerException(InvalidQuestionAnswerException ex, HttpHeaders headers, WebRequest request) {
-        return handleExceptionInternal(ex, new ApiError(ex.getMessage(), Severity.FATAL, HttpStatus.UNPROCESSABLE_ENTITY), headers, HttpStatus.UNPROCESSABLE_ENTITY, request);
+    protected ResponseEntity<Object> handleInvalidQuestionAnswerException(InvalidQuestionAnswerException ex, WebRequest request) {
+        return handleExceptionInternal(ex, new ApiError(ex.getMessage(), Severity.FATAL, HttpStatus.UNPROCESSABLE_ENTITY), new HttpHeaders(), HttpStatus.UNPROCESSABLE_ENTITY, request);
     }
 
     @ExceptionHandler(value = {BackToFutureException.class})
-    protected ResponseEntity<Object> handleBackToFutureException(BackToFutureException ex, HttpHeaders headers, WebRequest request) {
-        return handleExceptionInternal(ex, new ApiError(ex.getMessage(), Severity.FATAL, HttpStatus.UNPROCESSABLE_ENTITY), headers, HttpStatus.UNPROCESSABLE_ENTITY, request);
+    protected ResponseEntity<Object> handleBackToFutureException(final BackToFutureException ex, WebRequest request) {
+        return handleExceptionInternal(ex, new ApiError(ex.getMessage(), Severity.FATAL, HttpStatus.UNPROCESSABLE_ENTITY), new HttpHeaders(), HttpStatus.UNPROCESSABLE_ENTITY, request);
     }
 }

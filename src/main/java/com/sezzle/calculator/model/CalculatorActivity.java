@@ -1,28 +1,39 @@
 package com.sezzle.calculator.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.lang.NonNull;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+
+import javax.persistence.*;
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "CalculatorActivity")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CalculatorActivity {
+public class CalculatorActivity implements BaseEntity{
 
-    private String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.TABLE)
+    @JsonIgnore
+    private Long id;
 
+    @NonNull
+    @JsonProperty("user")
     private String user;
 
+    @NonNull
     private String question;
 
+    @NonNull
     private String answer;
 
+    @NonNull
     private LocalDate timestamp;
 
-    public CalculatorActivity(String id, String user, String question, String answer, LocalDate timestamp) {
-        this.id = id;
+    public CalculatorActivity(String user, String question, String answer, LocalDate timestamp) {
         this.user = user;
         this.question = question;
         this.answer = answer;
@@ -57,12 +68,11 @@ public class CalculatorActivity {
         this.answer = answer;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    @Id
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
