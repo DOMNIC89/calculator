@@ -121,15 +121,49 @@ class CalculatorActivityServiceTest {
         CalculatorActivityCO activityCO5 = createDummyCalculatorActivityCO(5,9L);
         activityCO5.setTimestamp(calculatorActivity5.getTimestamp());
 
-        LocalDateTime startTime = LocalDateTime.now().minusMinutes(10L).truncatedTo(ChronoUnit.SECONDS);
         LocalDateTime endTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         Mockito.when(repository.getAllCalculatorActivityBefore(endTime))
                 .thenReturn(Arrays.asList(calculatorActivity1, calculatorActivity2, calculatorActivity3, calculatorActivity4, calculatorActivity5));
         ReflectionTestUtils.setField(service, "lastElements", 3L);
+        ReflectionTestUtils.setField(service, "lastMins", 10L);
 
         List<CalculatorActivityCO> activityCOList = service.findLastXActivitiesLastXMins(endTime);
 
         Assertions.assertEquals(3, activityCOList.size());
+        Assertions.assertFalse(activityCOList.contains(activityCO4));
+        Assertions.assertFalse(activityCOList.contains(activityCO5));
+    }
+
+    @Test
+    @DisplayName("given a request for last x mins when present it should return the x elements")
+    public void testFindLast3ActivitiesLastXMins() {
+        //prepare create 5 elements
+        CalculatorActivity calculatorActivity1 = createDummyCalculatorActivity(1, 1L);
+        CalculatorActivity calculatorActivity2 = createDummyCalculatorActivity(2, 3L);
+        CalculatorActivity calculatorActivity3 = createDummyCalculatorActivity(3, 7L);
+        CalculatorActivity calculatorActivity4 = createDummyCalculatorActivity(4, 9L);
+        CalculatorActivity calculatorActivity5 = createDummyCalculatorActivity(5, 9L);
+
+        CalculatorActivityCO activityCO1 = createDummyCalculatorActivityCO(1,1L);
+        activityCO1.setTimestamp(calculatorActivity1.getTimestamp());
+        CalculatorActivityCO activityCO2 = createDummyCalculatorActivityCO(2, 3L);
+        activityCO2.setTimestamp(calculatorActivity2.getTimestamp());
+        CalculatorActivityCO activityCO3 = createDummyCalculatorActivityCO(3,7L);
+        activityCO3.setTimestamp(calculatorActivity3.getTimestamp());
+        CalculatorActivityCO activityCO4 = createDummyCalculatorActivityCO(4,9L);
+        activityCO4.setTimestamp(calculatorActivity4.getTimestamp());
+        CalculatorActivityCO activityCO5 = createDummyCalculatorActivityCO(5,9L);
+        activityCO5.setTimestamp(calculatorActivity5.getTimestamp());
+
+        LocalDateTime endTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        Mockito.when(repository.getAllCalculatorActivityBefore(endTime))
+                .thenReturn(Arrays.asList(calculatorActivity1, calculatorActivity2, calculatorActivity3, calculatorActivity4, calculatorActivity5));
+        ReflectionTestUtils.setField(service, "lastElements", 3L);
+        ReflectionTestUtils.setField(service, "lastMins", 7L);
+
+        List<CalculatorActivityCO> activityCOList = service.findLastXActivitiesLastXMins(endTime);
+
+        Assertions.assertEquals(2, activityCOList.size());
         Assertions.assertFalse(activityCOList.contains(activityCO4));
         Assertions.assertFalse(activityCOList.contains(activityCO5));
     }

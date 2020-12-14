@@ -30,6 +30,9 @@ public class CalculatorActivityService {
     @Value("${calculator.last-elems}")
     private Long lastElements;
 
+    @Value("${calculator.last-mins}")
+    private Long lastMins;
+
     public CalculatorActivityService(CalculatorActivityRepository repository, MqttServices mqttServices) {
         this.repository = repository;
         this.mqttServices = mqttServices;
@@ -70,8 +73,12 @@ public class CalculatorActivityService {
         LOG.info("Fetching the list for DateTime: {}", endTime);
         List<CalculatorActivity> lastActivities = repository.getAllCalculatorActivityBefore(endTime);
         LOG.info("Total activities returned {}", lastActivities.size());
-        return lastActivities.stream().map(activity -> new CalculatorActivityCO(activity.getUser(), activity.getQuestion(),
-                activity.getAnswer(), activity.getTimestamp())).limit(lastElements).collect(Collectors.toList());
+        return lastActivities.stream()
+                .filter(activity -> activity.getTimestamp().isAfter(LocalDateTime.now().minusMinutes(lastMins)))
+                .map(activity -> new CalculatorActivityCO(activity.getUser(), activity.getQuestion(),
+                    activity.getAnswer(), activity.getTimestamp()))
+                .limit(lastElements)
+                .collect(Collectors.toList());
     }
 
 
