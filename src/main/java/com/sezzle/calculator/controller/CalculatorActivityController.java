@@ -40,11 +40,8 @@ public class CalculatorActivityController {
 
     @RequestMapping(method = RequestMethod.POST)
     public ResponseEntity<?> postCalculatorActivity(@RequestBody CalculatorActivity activity) throws InvalidQuestionAnswerException, BackToFutureException {
-        try {
-            service.insert(activity);
-        } catch (IOException | MqttException e) {
-            LOG.error("Caught an exception while broadcasting ", e);
-        }
+        LOG.info("New Activity request for user: {}", activity.getUser());
+        service.insert(activity);
         return ResponseEntity.ok().build();
     }
 

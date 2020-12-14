@@ -35,7 +35,7 @@ public class CalculatorActivityService {
         this.mqttServices = mqttServices;
     }
 
-    public void insert(CalculatorActivity activity) throws InvalidQuestionAnswerException, BackToFutureException, IOException, MqttException {
+    public void insert(CalculatorActivity activity) throws InvalidQuestionAnswerException, BackToFutureException {
         if (StringUtils.isEmptyOrNull(activity.getQuestion())) {
             // throw an exception as Invalid Question
             LOG.info("Question field is missing data");
@@ -50,7 +50,7 @@ public class CalculatorActivityService {
 
         if (LocalDateTime.now().isBefore(activity.getTimestamp())) {
             // throw an exception as BackToFutureException
-            LOG.error("Future date is used in the timestamp");
+            LOG.info("Future date is used in the timestamp");
             throw new BackToFutureException("Tell me, Future Kid, who's President of the United States in 1985?");
         }
 
@@ -58,7 +58,11 @@ public class CalculatorActivityService {
         CalculatorActivity savedActivity = repository.save(activity);
         // broadcast this activity to other users
         LOG.info("Broadcasting the message to all for the activity saved");
-        mqttServices.sendMessage(savedActivity);
+        try {
+            mqttServices.sendMessage(savedActivity);
+        } catch (IOException | MqttException e) {
+            LOG.warn("Unable to send message error: {}", e.getMessage());
+        }
     }
 
     // Create a get function to retrieve last 10 minutes of activities
