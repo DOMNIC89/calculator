@@ -1,19 +1,22 @@
 package com.sezzle.calculator.model;
 
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.lang.NonNull;
 
-
 import javax.persistence.*;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.function.Function;
+
+import static com.sezzle.calculator.Constants.DATE_TIME_PATTERN;
 
 @Entity
 @Table(name = "CalculatorActivity")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CalculatorActivity implements BaseEntity{
+public class CalculatorActivity implements BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.TABLE)
@@ -21,19 +24,23 @@ public class CalculatorActivity implements BaseEntity{
     private Long id;
 
     @NonNull
-    @JsonProperty("user")
+    @JsonProperty
     private String user;
 
     @NonNull
+    @JsonProperty
     private String question;
 
     @NonNull
+    @JsonProperty
     private String answer;
 
     @NonNull
-    private LocalDate timestamp;
+    @JsonFormat(pattern = DATE_TIME_PATTERN)
+    @JsonProperty
+    private LocalDateTime timestamp;
 
-    public CalculatorActivity(String user, String question, String answer, LocalDate timestamp) {
+    public CalculatorActivity(String user, String question, String answer, LocalDateTime timestamp) {
         this.user = user;
         this.question = question;
         this.answer = answer;
@@ -76,11 +83,11 @@ public class CalculatorActivity implements BaseEntity{
         return id;
     }
 
-    public LocalDate getTimestamp() {
+    public LocalDateTime getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(LocalDate timestamp) {
+    public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
 }

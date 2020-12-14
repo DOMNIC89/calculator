@@ -8,6 +8,8 @@ import com.sezzle.calculator.model.CalculatorActivity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static com.sezzle.calculator.Constants.API_PATH_V1;
 import static com.sezzle.calculator.configuration.WebConfig.OBJECT_MAPPER;
@@ -36,7 +39,7 @@ class CalculatorActivityControllerIntegrationTest {
 
     @Test
     public void testPostCalculatorActivity() throws JsonProcessingException {
-        CalculatorActivity activity = new CalculatorActivity("userA", "12+2", "14", LocalDate.now());
+        CalculatorActivity activity = new CalculatorActivity("userA", "12+2", "14", LocalDateTime.now());
 
         given()
                 .header("content-type", "application/json")
