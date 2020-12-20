@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -42,7 +43,7 @@ public class CalculatorActivityController {
     @RequestMapping(method = RequestMethod.GET)
     public ResponseEntity<List<CalculatorActivityCO>> findAllLastXActivities() {
         LOG.info("Fetching the calculator activities through GET method");
-        LocalDateTime endTime = LocalDateTime.now().plusMinutes(2L).truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
         return ResponseEntity.ok(service.findLastXActivitiesLastXMins(endTime));
     }
 }

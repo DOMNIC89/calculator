@@ -17,7 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.time.LocalDate;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -58,7 +58,7 @@ class CalculatorActivityControllerIntegrationTest {
 
     @Test
     public void testPostCalculatorActivityWithInvalid() {
-        String json = String.format("{\"question\": \"2+2\", \"answer\": \"\", \"timestamp\": \"%s\", \"user\": \"Bob\"}", LocalDate.now().toString());
+        String json = "{\"question\": \"2+2\", \"answer\": \"\", \"timestamp\": \"2020-12-20T19:20:37.040Z\", \"user\": \"Bob\"}";
         ApiError expectedAPIError = new ApiError("Answer field is missing data", Severity.FATAL, HttpStatus.UNPROCESSABLE_ENTITY);
         given()
                 .header("content-type", "application/json")
@@ -75,10 +75,9 @@ class CalculatorActivityControllerIntegrationTest {
 
     @Test
     public void testFindAllLastXActivities() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         CalculatorActivity activity = new CalculatorActivity("Bob", "2+2", "4", now.minusMinutes(2L));
         CalculatorActivity savedActivity = repository.save(activity);
-        String json = String.format("[{\"question\": \"2+2\", \"answer\": \"4\", \"timestamp\": \"%s\", \"user\": \"Bob\"}]", now.toString());
         List actualResponse = given()
                 .header("content-type", "application/json")
                 .with()
