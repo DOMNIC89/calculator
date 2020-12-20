@@ -13,9 +13,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,15 +32,28 @@ public class CalculatorActivityService {
 
     private final MqttServices mqttServices;
 
+    private final ArrayBlockingQueue<CalculatorActivity> queue;
+
     @Value("${calculator.last-elems}")
-    private Long lastElements;
+    private final Long lastElements;
 
     @Value("${calculator.last-mins}")
     private Long lastMins;
 
-    public CalculatorActivityService(CalculatorActivityRepository repository, MqttServices mqttServices) {
+    public CalculatorActivityService(CalculatorActivityRepository repository, MqttServices mqttServices,
+                                     @Value("${calculator.last-elems}") Long lastElements) {
         this.repository = repository;
         this.mqttServices = mqttServices;
+        this.lastElements = lastElements;
+        this.queue = new ArrayBlockingQueue<>(this.lastElements.intValue());
+    }
+
+    @PostConstruct
+    public void initializeCache() {
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
+        List<CalculatorActivity> activities = repository.getAllCalculatorActivityBefore(endTime);
+        this.queue.addAll(activities.stream().filter(activity -> activity.getTimestamp().isAfter(LocalDateTime.now().minusMinutes(lastMins)))
+                .limit(this.lastElements.intValue()).collect(Collectors.toList()));
     }
 
     public void insert(CalculatorActivity activity) throws InvalidQuestionAnswerException, BackToFutureException {
@@ -59,10 +77,19 @@ public class CalculatorActivityService {
 
         LOG.info("Saving the activity of user {}", activity.getUser());
         CalculatorActivity savedActivity = repository.save(activity);
+        // save the element to the cache
+        boolean successfullyAdded = this.queue.offer(savedActivity);
+        // if not saved remove the element from the queue and save it on the
+        if (!successfullyAdded) {
+            this.queue.poll();
+            this.queue.offer(savedActivity);
+        }
         // broadcast this activity to other users
         LOG.info("Broadcasting the message to all for the activity saved");
         try {
-            mqttServices.sendMessage(savedActivity);
+            List<CalculatorActivityCO> activities = this.queue.stream().map(ca -> new CalculatorActivityCO(ca.getUser(), ca.getQuestion(),
+                            ca.getAnswer(), ca.getTimestamp())).collect(Collectors.toList());
+            mqttServices.sendMessages(activities, savedActivity.getId());
         } catch (IOException | MqttException e) {
             LOG.warn("Unable to send message error: {}", e.getMessage());
         }
@@ -71,10 +98,15 @@ public class CalculatorActivityService {
     // Create a get function to retrieve last 10 minutes of activities
     public List<CalculatorActivityCO> findLastXActivitiesLastXMins(LocalDateTime endTime) {
         LOG.info("Fetching the list for DateTime: {}", endTime);
-        List<CalculatorActivity> lastActivities = repository.getAllCalculatorActivityBefore(endTime);
-        LOG.info("Total activities returned {}", lastActivities.size());
-        return lastActivities.stream()
-                .filter(activity -> activity.getTimestamp().isAfter(LocalDateTime.now().minusMinutes(lastMins)))
+        if (queue.isEmpty()) {
+            List<CalculatorActivity> activities = repository.getAllCalculatorActivityBefore(endTime);
+            List<CalculatorActivity> collect = activities.stream().filter(activity -> activity.getTimestamp()
+                    .isAfter(LocalDateTime.now(Clock.systemUTC()).minusMinutes(lastMins)))
+                    .limit(lastElements).collect(Collectors.toList());
+            queue.addAll(collect);
+        }
+        return queue.stream()
+                .filter(activity -> activity.getTimestamp().isAfter(LocalDateTime.now(Clock.systemUTC()).minusMinutes(lastMins)))
                 .map(activity -> new CalculatorActivityCO(activity.getUser(), activity.getQuestion(),
                     activity.getAnswer(), activity.getTimestamp()))
                 .limit(lastElements)

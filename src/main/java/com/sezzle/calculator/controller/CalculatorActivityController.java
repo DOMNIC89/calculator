@@ -31,9 +31,6 @@ public class CalculatorActivityController {
 
     private final CalculatorActivityService service;
 
-    @Value("${calculator.last-mins}")
-    private Long lastMins;
-
     public CalculatorActivityController(CalculatorActivityService service) {
         this.service = service;
     }

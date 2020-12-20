@@ -5,11 +5,12 @@ import com.sezzle.calculator.Constants;
 import com.sezzle.calculator.Severity;
 import com.sezzle.calculator.common.ApiError;
 import com.sezzle.calculator.model.CalculatorActivity;
+import com.sezzle.calculator.repository.CalculatorActivityRepository;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static com.sezzle.calculator.Constants.API_PATH_V1;
 import static com.sezzle.calculator.configuration.WebConfig.OBJECT_MAPPER;
@@ -31,6 +33,9 @@ class CalculatorActivityControllerIntegrationTest {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private CalculatorActivityRepository repository;
 
     @BeforeEach
     public void init() {
@@ -66,6 +71,26 @@ class CalculatorActivityControllerIntegrationTest {
                 .body("severity", equalTo(expectedAPIError.getSeverity().toString()))
                 .body("status", equalTo("UNPROCESSABLE_ENTITY"));
 
+    }
+
+    @Test
+    public void testFindAllLastXActivities() {
+        LocalDateTime now = LocalDateTime.now();
+        CalculatorActivity activity = new CalculatorActivity("Bob", "2+2", "4", now.minusMinutes(2L));
+        CalculatorActivity savedActivity = repository.save(activity);
+        String json = String.format("[{\"question\": \"2+2\", \"answer\": \"4\", \"timestamp\": \"%s\", \"user\": \"Bob\"}]", now.toString());
+        List actualResponse = given()
+                .header("content-type", "application/json")
+                .with()
+                .get(constructUrl(port, Constants.CALCULATOR_ACTIVITY_PATH))
+                .then()
+                .log().ifValidationFails()
+                .statusCode(HttpStatus.OK.value())
+                .extract()
+                .body()
+                .as(List.class);
+        Assertions.assertEquals(1, actualResponse.size());
+        repository.delete(savedActivity);
     }
 
     private String constructUrl(int port, String path) {

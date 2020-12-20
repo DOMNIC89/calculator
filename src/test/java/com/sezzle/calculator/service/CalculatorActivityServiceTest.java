@@ -12,17 +12,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.platform.commons.util.ReflectionUtils;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +41,38 @@ class CalculatorActivityServiceTest {
 
     @BeforeEach
     public void setup() {
-        service = new CalculatorActivityService(repository, mqttServices);
+        service = new CalculatorActivityService(repository, mqttServices, 3L);
+    }
+
+    @Test
+    public void testPostConstructInitializeCache() {
+        CalculatorActivity activity1 = createDummyCalculatorActivity(1, 0L);
+        CalculatorActivity activity2  = createDummyCalculatorActivity(2, 3L);
+        CalculatorActivity activity3  = createDummyCalculatorActivity(3, 2L);
+        CalculatorActivity activity4  = createDummyCalculatorActivity(4, 3L);
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
+        Mockito.when(repository.getAllCalculatorActivityBefore(endTime)).thenReturn(Arrays.asList(activity1, activity2, activity3, activity4));
+        ReflectionTestUtils.setField(service, "lastMins", 10L);
+
+        service.initializeCache();
+        BlockingQueue<CalculatorActivity> queue = (BlockingQueue<CalculatorActivity>) ReflectionTestUtils.getField(service, "queue");
+        assert queue != null;
+        Assertions.assertEquals(3, queue.size());
+        Assertions.assertTrue(queue.contains(activity1));
+        Assertions.assertTrue(queue.contains(activity3));
+        Assertions.assertTrue(queue.contains(activity2));
+        Assertions.assertFalse(queue.contains(activity4));
+    }
+
+    @Test
+    public void testPostConstructInitializeCacheWithNoValues() {
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
+        Mockito.when(repository.getAllCalculatorActivityBefore(endTime)).thenReturn(new ArrayList<>());
+
+        service.initializeCache();
+        BlockingQueue<CalculatorActivity> queue = (BlockingQueue<CalculatorActivity>) ReflectionTestUtils.getField(service, "queue");
+        assert queue != null;
+        Assertions.assertEquals(0, queue.size());
     }
 
 
@@ -47,10 +81,42 @@ class CalculatorActivityServiceTest {
     public void testGivenActivityWhenValidShouldSave() throws InvalidQuestionAnswerException, BackToFutureException, IOException, MqttException {
         //prepare
         CalculatorActivity activity = createDummyCalculatorActivity();
+        Mockito.when(repository.save(activity)).thenReturn(activity);
         //Action
         service.insert(activity);
+        BlockingQueue<CalculatorActivity> queue = (BlockingQueue<CalculatorActivity>) ReflectionTestUtils.getField(service, "queue");
+        assert queue != null;
+        Assertions.assertEquals(1, queue.size());
         //result
         Mockito.verify(repository).save(activity);
+    }
+
+    @Test
+    @DisplayName("given activity and when the queue is full it should remove the older activity")
+    public void testGivenActivityWhenValidShouldRemoveOlderElements() throws InvalidQuestionAnswerException, BackToFutureException {
+        CalculatorActivity activity1 = createDummyCalculatorActivity();
+        activity1.setId(1L);
+        CalculatorActivity activity2  = createDummyCalculatorActivity();
+        activity2.setId(2L);
+        CalculatorActivity activity3  = createDummyCalculatorActivity();
+        activity3.setId(3L);
+
+        List<CalculatorActivity> list = Arrays.asList(activity1, activity2, activity3);
+        ArrayBlockingQueue<CalculatorActivity> queue = new ArrayBlockingQueue<>(3,true, list);
+        ReflectionTestUtils.setField(service, "queue", queue);
+
+        CalculatorActivity activity = createDummyCalculatorActivity();
+        CalculatorActivity repositoryActivity = activity;
+        repositoryActivity.setId(4L);
+        Mockito.when(repository.save(activity)).thenReturn(repositoryActivity);
+        service.insert(activity);
+
+        BlockingQueue<CalculatorActivity> expectedQueue = (BlockingQueue<CalculatorActivity>) ReflectionTestUtils.getField(service, "queue");
+        assert expectedQueue != null;
+        Assertions.assertTrue(expectedQueue.contains(repositoryActivity));
+        Assertions.assertTrue(expectedQueue.contains(activity3));
+        Assertions.assertTrue(expectedQueue.contains(activity2));
+        Assertions.assertFalse(expectedQueue.contains(activity1));
     }
 
     @Test
@@ -122,8 +188,9 @@ class CalculatorActivityServiceTest {
         activityCO5.setTimestamp(calculatorActivity5.getTimestamp());
 
         LocalDateTime endTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        Mockito.when(repository.getAllCalculatorActivityBefore(endTime))
-                .thenReturn(Arrays.asList(calculatorActivity1, calculatorActivity2, calculatorActivity3, calculatorActivity4, calculatorActivity5));
+        ReflectionTestUtils.setField(service, "queue",
+                new ArrayBlockingQueue<>(5, true, Arrays.asList(calculatorActivity1, calculatorActivity2,
+                        calculatorActivity3, calculatorActivity4, calculatorActivity5)));
         ReflectionTestUtils.setField(service, "lastElements", 3L);
         ReflectionTestUtils.setField(service, "lastMins", 10L);
 
@@ -155,17 +222,28 @@ class CalculatorActivityServiceTest {
         CalculatorActivityCO activityCO5 = createDummyCalculatorActivityCO(5,9L);
         activityCO5.setTimestamp(calculatorActivity5.getTimestamp());
 
-        LocalDateTime endTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        Mockito.when(repository.getAllCalculatorActivityBefore(endTime))
-                .thenReturn(Arrays.asList(calculatorActivity1, calculatorActivity2, calculatorActivity3, calculatorActivity4, calculatorActivity5));
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
+        ReflectionTestUtils.setField(service, "queue",
+                new ArrayBlockingQueue<>(5, true, Arrays.asList(calculatorActivity1, calculatorActivity2,
+                        calculatorActivity3, calculatorActivity4, calculatorActivity5)));
         ReflectionTestUtils.setField(service, "lastElements", 3L);
         ReflectionTestUtils.setField(service, "lastMins", 7L);
 
         List<CalculatorActivityCO> activityCOList = service.findLastXActivitiesLastXMins(endTime);
 
-        Assertions.assertEquals(2, activityCOList.size());
+        Assertions.assertEquals(3, activityCOList.size());
         Assertions.assertFalse(activityCOList.contains(activityCO4));
         Assertions.assertFalse(activityCOList.contains(activityCO5));
+    }
+
+    @Test
+    @DisplayName("given a request for last x activities in last y mins when repository returns empty should return empty COs")
+    public void testFindLastXActivitiesLastYMinsWithNoResult() {
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
+        Mockito.when(repository.getAllCalculatorActivityBefore(endTime)).thenReturn(new ArrayList<>());
+        List<CalculatorActivityCO> expectedList = new ArrayList<>();
+        List<CalculatorActivityCO> actualList = service.findLastXActivitiesLastXMins(endTime);
+        Assertions.assertEquals(expectedList, actualList);
     }
 
     private CalculatorActivity createDummyCalculatorActivity() {

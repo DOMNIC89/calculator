@@ -68,8 +68,6 @@ class CalculatorActivityControllerTest {
         List<CalculatorActivityCO> list = Arrays.asList(activityCO1, activityCO2, activityCO3);
         ResponseEntity<List<CalculatorActivityCO>> expectedResponse = ResponseEntity.ok(list);
 
-        long lastMins = 10;
-        ReflectionTestUtils.setField(controller, "lastMins", lastMins);
         LocalDateTime endTime = LocalDateTime.now().plusMinutes(2L).truncatedTo(ChronoUnit.SECONDS);
         Mockito.when(service.findLastXActivitiesLastXMins(endTime)).thenReturn(list);
 
@@ -83,8 +81,6 @@ class CalculatorActivityControllerTest {
         List<CalculatorActivityCO> list = new ArrayList<>();
         ResponseEntity<List<CalculatorActivityCO>> expectedResponse = ResponseEntity.ok(list);
 
-        long lastMins = 10;
-        ReflectionTestUtils.setField(controller, "lastMins", lastMins);
         LocalDateTime endTime = LocalDateTime.now().plusMinutes(2L).truncatedTo(ChronoUnit.SECONDS);
         Mockito.when(service.findLastXActivitiesLastXMins(endTime)).thenReturn(list);
 
