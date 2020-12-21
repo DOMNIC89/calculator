@@ -67,4 +67,35 @@ public class CalculatorActivityCO {
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
+
+    public static class CalculatorActivityCOBuilder {
+        private String user;
+        private String question;
+        private String answer;
+        private LocalDateTime timestamp;
+
+        public CalculatorActivityCOBuilder user(String user) {
+            this.user = user;
+            return this;
+        }
+
+        public CalculatorActivityCOBuilder question(String question) {
+            this.question = question;
+            return this;
+        }
+
+        public CalculatorActivityCOBuilder answer(String answer) {
+            this.answer = answer;
+            return this;
+        }
+
+        public CalculatorActivityCOBuilder timestamp(LocalDateTime timestamp) {
+            this.timestamp = timestamp;
+            return this;
+        }
+
+        public CalculatorActivityCO build() {
+            return new CalculatorActivityCO(this.user, this.question, this.answer, this.timestamp);
+        }
+    }
 }

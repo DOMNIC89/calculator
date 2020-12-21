@@ -1,6 +1,7 @@
 package com.sezzle.calculator.service;
 
 import com.sezzle.calculator.command.CalculatorActivityCO;
+import com.sezzle.calculator.common.CalculatorActivityNapper;
 import com.sezzle.calculator.configuration.MqttServices;
 import com.sezzle.calculator.exception.BackToFutureException;
 import com.sezzle.calculator.exception.InvalidQuestionAnswerException;
@@ -86,8 +87,9 @@ public class CalculatorActivityService {
         // broadcast this activity to other users
         LOG.info("Broadcasting the message to all for the activity saved");
         try {
-            List<CalculatorActivityCO> activities = this.queue.stream().map(ca -> new CalculatorActivityCO(ca.getUser(), ca.getQuestion(),
-                            ca.getAnswer(), ca.getTimestamp())).collect(Collectors.toList());
+            List<CalculatorActivityCO> activities = this.queue.stream()
+                    .map(CalculatorActivityNapper::convertToCalculatorActivityCO)
+                    .collect(Collectors.toList());
             mqttServices.sendMessages(activities, savedActivity.getId());
         } catch (IOException | MqttException e) {
             LOG.warn("Unable to send message error: {}", e.getMessage());
@@ -106,11 +108,9 @@ public class CalculatorActivityService {
         }
         return queue.stream()
                 .filter(activity -> activity.getTimestamp().isAfter(LocalDateTime.now(Clock.systemUTC()).minusMinutes(lastMins)))
-                .map(activity -> new CalculatorActivityCO(activity.getUser(), activity.getQuestion(),
-                    activity.getAnswer(), activity.getTimestamp()))
+                .map(CalculatorActivityNapper::convertToCalculatorActivityCO)
                 .limit(lastElements)
                 .collect(Collectors.toList());
     }
-
 
 }
