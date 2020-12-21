@@ -2,7 +2,8 @@ package com.sezzle.calculator.controller;
 
 import com.sezzle.calculator.command.CalculatorActivityCO;
 import com.sezzle.calculator.exception.BackToFutureException;
-import com.sezzle.calculator.exception.InvalidQuestionAnswerException;
+import com.sezzle.calculator.exception.InvalidArithmeticExpressionException;
+import com.sezzle.calculator.exception.InvalidQuestionException;
 import com.sezzle.calculator.model.CalculatorActivity;
 import com.sezzle.calculator.service.CalculatorActivityService;
 import org.slf4j.Logger;
@@ -34,10 +35,10 @@ public class CalculatorActivityController {
     }
 
     @RequestMapping(method = RequestMethod.POST)
-    public ResponseEntity<?> postCalculatorActivity(@RequestBody CalculatorActivity activity) throws InvalidQuestionAnswerException, BackToFutureException {
+    public ResponseEntity<CalculatorActivityCO> postCalculatorActivity(@RequestBody CalculatorActivity activity) throws InvalidQuestionException, BackToFutureException, InvalidArithmeticExpressionException {
         LOG.info("New Activity request for user: {}", activity.getUser());
-        service.insert(activity);
-        return ResponseEntity.ok().build();
+        CalculatorActivityCO activityCO = service.insert(activity);
+        return ResponseEntity.ok(activityCO);
     }
 
     @RequestMapping(method = RequestMethod.GET)

@@ -2,7 +2,8 @@ package com.sezzle.calculator.controller;
 
 import com.sezzle.calculator.command.CalculatorActivityCO;
 import com.sezzle.calculator.exception.BackToFutureException;
-import com.sezzle.calculator.exception.InvalidQuestionAnswerException;
+import com.sezzle.calculator.exception.InvalidArithmeticExpressionException;
+import com.sezzle.calculator.exception.InvalidQuestionException;
 import com.sezzle.calculator.model.CalculatorActivity;
 import com.sezzle.calculator.service.CalculatorActivityService;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -16,10 +17,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
-import java.time.LocalDate;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -43,20 +43,33 @@ class CalculatorActivityControllerTest {
 
     @Test
     @DisplayName("given an activity when valid should call insert method of service and return status as ok")
-    public void testPostCalculatorActivity() throws InvalidQuestionAnswerException, BackToFutureException, IOException, MqttException {
-        CalculatorActivity activity = new CalculatorActivity("user-1", "2+2", "4", LocalDateTime.now());
-        ResponseEntity<?> responseEntity = controller.postCalculatorActivity(activity);
-        Mockito.verify(service).insert(activity);
+    public void testPostCalculatorActivity() throws InvalidQuestionException, BackToFutureException, InvalidArithmeticExpressionException {
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+        CalculatorActivity activity = new CalculatorActivity("user-1", "2*2", "", now);
+        CalculatorActivityCO expectedCO = new CalculatorActivityCO("user-1", "2*2", "4", now);
+        Mockito.when(service.insert(activity)).thenReturn(expectedCO);
+        ResponseEntity<CalculatorActivityCO> responseEntity = controller.postCalculatorActivity(activity);
+        CalculatorActivityCO actualCO = responseEntity.getBody();
         assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assert actualCO != null;
+        assertEquals(expectedCO.getAnswer(), actualCO.getAnswer());
     }
 
     @Test
     @DisplayName("given an activity when invalid should throw an exception")
-    public void testPostCalculatorActivityThrowInvalidQuestionAnswerException() throws InvalidQuestionAnswerException, BackToFutureException, IOException, MqttException {
+    public void testPostCalculatorActivityThrowInvalidQuestionAnswerException() throws InvalidQuestionException, BackToFutureException, InvalidArithmeticExpressionException {
         CalculatorActivity activity = new CalculatorActivity("user-1", "", "4", LocalDateTime.now());
-        Mockito.doThrow(new InvalidQuestionAnswerException("Question")).when(service).insert(activity);
-        Assertions.assertThrows(InvalidQuestionAnswerException.class, () -> controller.postCalculatorActivity(activity),
+        Mockito.doThrow(new InvalidQuestionException("Question")).when(service).insert(activity);
+        Assertions.assertThrows(InvalidQuestionException.class, () -> controller.postCalculatorActivity(activity),
                 "Exception is not thrown as expected");
+    }
+
+    @Test
+    @DisplayName("given an activity when invalid expression should throw an exception")
+    public void testPostCalculatorActivityThrowInvalidArithmeticExpressionException() throws InvalidArithmeticExpressionException, BackToFutureException, InvalidQuestionException {
+        CalculatorActivity activity = new CalculatorActivity("user-1", "2++2", "", LocalDateTime.now());
+        Mockito.doThrow(new InvalidArithmeticExpressionException()).when(service).insert(activity);
+        Assertions.assertThrows(InvalidArithmeticExpressionException.class, () -> controller.postCalculatorActivity(activity));
     }
 
     @Test
@@ -68,7 +81,7 @@ class CalculatorActivityControllerTest {
         List<CalculatorActivityCO> list = Arrays.asList(activityCO1, activityCO2, activityCO3);
         ResponseEntity<List<CalculatorActivityCO>> expectedResponse = ResponseEntity.ok(list);
 
-        LocalDateTime endTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
         Mockito.when(service.findLastXActivitiesLastXMins(endTime)).thenReturn(list);
 
         ResponseEntity<List<CalculatorActivityCO>> actualResponse = controller.findAllLastXActivities();
@@ -81,7 +94,7 @@ class CalculatorActivityControllerTest {
         List<CalculatorActivityCO> list = new ArrayList<>();
         ResponseEntity<List<CalculatorActivityCO>> expectedResponse = ResponseEntity.ok(list);
 
-        LocalDateTime endTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime endTime = LocalDateTime.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS);
         Mockito.when(service.findLastXActivitiesLastXMins(endTime)).thenReturn(list);
 
         ResponseEntity<List<CalculatorActivityCO>> actualResponse = controller.findAllLastXActivities();

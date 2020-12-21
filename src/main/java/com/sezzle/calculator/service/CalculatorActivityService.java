@@ -4,7 +4,9 @@ import com.sezzle.calculator.command.CalculatorActivityCO;
 import com.sezzle.calculator.common.CalculatorActivityNapper;
 import com.sezzle.calculator.configuration.MqttServices;
 import com.sezzle.calculator.exception.BackToFutureException;
-import com.sezzle.calculator.exception.InvalidQuestionAnswerException;
+import com.sezzle.calculator.exception.InvalidArithmeticExpressionException;
+import com.sezzle.calculator.exception.InvalidQuestionException;
+import com.sezzle.calculator.helper.ExpressionEvaluation;
 import com.sezzle.calculator.helper.StringUtils;
 import com.sezzle.calculator.model.CalculatorActivity;
 import com.sezzle.calculator.repository.CalculatorActivityRepository;
@@ -56,17 +58,17 @@ public class CalculatorActivityService {
                 .limit(this.lastElements.intValue()).collect(Collectors.toList()));
     }
 
-    public void insert(CalculatorActivity activity) throws InvalidQuestionAnswerException, BackToFutureException {
+    public CalculatorActivityCO insert(CalculatorActivity activity) throws InvalidQuestionException, BackToFutureException, InvalidArithmeticExpressionException {
         if (StringUtils.isEmptyOrNull(activity.getQuestion())) {
             // throw an exception as Invalid Question
             LOG.info("Question field is missing data");
-            throw new InvalidQuestionAnswerException("Question");
+            throw new InvalidQuestionException("Question");
         }
 
-        if (StringUtils.isEmptyOrNull(activity.getAnswer())) {
-            // throw an exception as Invalid Answer
-            LOG.info("Answer field is missing data");
-            throw new InvalidQuestionAnswerException("Answer");
+        // check the validity of the question via regex
+        if (!ExpressionEvaluation.isValidArithmeticExpression(activity.getQuestion())) {
+            LOG.info("Question is an invalid arithmetic expression");
+            throw new InvalidArithmeticExpressionException();
         }
 
         if (LocalDateTime.now().isBefore(activity.getTimestamp())) {
@@ -74,6 +76,8 @@ public class CalculatorActivityService {
             LOG.info("Future date is used in the timestamp");
             throw new BackToFutureException("Tell me, Future Kid, who's President of the United States in 1985?");
         }
+        // set the answer based on the input received for expression
+        activity.setAnswer(String.valueOf(ExpressionEvaluation.evaluate(activity.getQuestion())));
 
         LOG.info("Saving the activity of user {}", activity.getUser());
         CalculatorActivity savedActivity = repository.save(activity);
@@ -94,6 +98,7 @@ public class CalculatorActivityService {
         } catch (IOException | MqttException e) {
             LOG.warn("Unable to send message error: {}", e.getMessage());
         }
+        return CalculatorActivityNapper.convertToCalculatorActivityCO(savedActivity);
     }
 
     // Create a get function to retrieve last 10 minutes of activities

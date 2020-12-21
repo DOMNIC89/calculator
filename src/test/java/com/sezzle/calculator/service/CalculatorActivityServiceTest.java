@@ -3,7 +3,8 @@ package com.sezzle.calculator.service;
 import com.sezzle.calculator.command.CalculatorActivityCO;
 import com.sezzle.calculator.configuration.MqttServices;
 import com.sezzle.calculator.exception.BackToFutureException;
-import com.sezzle.calculator.exception.InvalidQuestionAnswerException;
+import com.sezzle.calculator.exception.InvalidArithmeticExpressionException;
+import com.sezzle.calculator.exception.InvalidQuestionException;
 import com.sezzle.calculator.model.CalculatorActivity;
 import com.sezzle.calculator.repository.CalculatorActivityRepository;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -78,22 +79,25 @@ class CalculatorActivityServiceTest {
 
     @Test
     @DisplayName("given activity when valid should save")
-    public void testGivenActivityWhenValidShouldSave() throws InvalidQuestionAnswerException, BackToFutureException, IOException, MqttException {
+    public void testGivenActivityWhenValidShouldSave() throws InvalidQuestionException, BackToFutureException, InvalidArithmeticExpressionException {
         //prepare
         CalculatorActivity activity = createDummyCalculatorActivity();
         Mockito.when(repository.save(activity)).thenReturn(activity);
         //Action
-        service.insert(activity);
+        activity.setAnswer("4.0");
+        CalculatorActivityCO expectedActivityCO = createDummyCalculatorActivityCO(1, 0L);
+        CalculatorActivityCO actualActivityCO = service.insert(activity);
         BlockingQueue<CalculatorActivity> queue = (BlockingQueue<CalculatorActivity>) ReflectionTestUtils.getField(service, "queue");
         assert queue != null;
         Assertions.assertEquals(1, queue.size());
         //result
         Mockito.verify(repository).save(activity);
+        Assertions.assertEquals(expectedActivityCO.getAnswer(), actualActivityCO.getAnswer());
     }
 
     @Test
     @DisplayName("given activity and when the queue is full it should remove the older activity")
-    public void testGivenActivityWhenValidShouldRemoveOlderElements() throws InvalidQuestionAnswerException, BackToFutureException {
+    public void testGivenActivityWhenValidShouldRemoveOlderElements() throws InvalidQuestionException, BackToFutureException, InvalidArithmeticExpressionException {
         CalculatorActivity activity1 = createDummyCalculatorActivity();
         activity1.setId(1L);
         CalculatorActivity activity2  = createDummyCalculatorActivity();
@@ -128,8 +132,8 @@ class CalculatorActivityServiceTest {
         String expectedMessage = "Question field is missing data";
         // Action
 
-        Exception exception = Assertions.assertThrows(InvalidQuestionAnswerException.class, () -> service.insert(activity),
-                "Expected to throw InvalidQuestionAnswerException but didn't throw for missing questio field");
+        Exception exception = Assertions.assertThrows(InvalidQuestionException.class, () -> service.insert(activity),
+                "Expected to throw InvalidQuestionAnswerException but didn't throw for missing question field");
         String actualMessage = exception.getMessage();
 
         Assertions.assertEquals(expectedMessage, actualMessage,
@@ -137,19 +141,17 @@ class CalculatorActivityServiceTest {
     }
 
     @Test
-    @DisplayName("given activity when invalid with answer should throw exception")
-    public void testInsertWithInvalidAnswer() {
-        //Prepare
+    @DisplayName("given an activity when question is not a proper arithmetic expression should throw exception")
+    public void testGivenActivityWhenInvalidWithQuestionExprShouldThrowException() {
         CalculatorActivity activity = createDummyCalculatorActivity();
-        activity.setAnswer(null);
-        String expectedMessage = "Answer field is missing data";
+        activity.setQuestion("2//2");
+        String expectedMessage = "Question has invalid arithmetic expression";
 
-        Exception exception = Assertions.assertThrows(InvalidQuestionAnswerException.class, () -> service.insert(activity),
-                "Expected to throw InvalidQuestionAnswerException but didn't throw for missing answer field");
+        InvalidArithmeticExpressionException exception = Assertions.assertThrows(InvalidArithmeticExpressionException.class, () -> service.insert(activity));
+
         String actualMessage = exception.getMessage();
+        Assertions.assertEquals(expectedMessage, actualMessage);
 
-        Assertions.assertEquals(expectedMessage, actualMessage,
-                "InvalidQuestionAnswerException is thrown with a different message for answer field");
     }
 
     @Test
@@ -255,7 +257,7 @@ class CalculatorActivityServiceTest {
     }
 
     private CalculatorActivityCO createDummyCalculatorActivityCO(int id, long timeMinuteDifference) {
-        return new CalculatorActivityCO("user-"+id, "2+2", "4", LocalDateTime.now().minusMinutes(timeMinuteDifference));
+        return new CalculatorActivityCO("user-"+id, "2+2", "4.0", LocalDateTime.now().minusMinutes(timeMinuteDifference));
     }
 
 }
