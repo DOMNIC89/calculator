@@ -23,7 +23,7 @@ import static com.sezzle.calculator.Constants.DATE_TIME_PATTERN;
 public class CalculatorActivity implements BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @JsonIgnore
     private Long id;
 

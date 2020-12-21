@@ -12,8 +12,6 @@ import java.util.List;
 @Repository
 public interface CalculatorActivityRepository extends JpaRepository<CalculatorActivity, Long> {
 
-    List<CalculatorActivity> findAllByTimestampBetween(LocalDateTime timestamp, LocalDateTime timestamp2);
-
     @Query("select c from CalculatorActivity c where c.timestamp <= :currentDateTime order by c.timestamp desc")
     List<CalculatorActivity> getAllCalculatorActivityBefore(@Param("currentDateTime") LocalDateTime currentDateTime);
 }
